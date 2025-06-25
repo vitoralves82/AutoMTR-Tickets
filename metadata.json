@@ -1,5 +1,5 @@
 {
-  "name": "Copy of AutoMMR.v2",
+  "name": "AutoMMR.v2",
   "description": "Extracts data from Manifesto Marítimo de Resíduos (MMR) form images using Gemini API and displays it in a structured table. The application allows users to upload an image of the MMR form, processes it to extract key information from the header and waste items table, and then presents this data in an organized, easy-to-read format.",
   "requestFramePermissions": [],
   "prompt": ""
