@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoMMR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif; /* A common, clean sans-serif font */
+      background-image: url('https://environpact.com/wp-content/uploads/2024/02/bg-slide-home-2.jpg'); /* Updated EnvironPact background image URL */
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-color: #0f172a; /* Fallback color (slate-900) */
+      color: #f1f5f9; /* slate-100 for default text */
+    }
+    /* Custom scrollbar for EnvironPact theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b; /* slate-800 */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #0d9488; /* teal-600 */
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0f766e; /* teal-700 */
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.6.0",
+    "pdfjs-dist/build/pdf.mjs": "https://esm.sh/pdfjs-dist@4.4.168/build/pdf.mjs",
+    "pdfjs-dist/": "https://esm.sh/pdfjs-dist@^5.3.31/",
+    "xlsx": "https://esm.sh/xlsx@0.18.5"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="text-slate-100">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
