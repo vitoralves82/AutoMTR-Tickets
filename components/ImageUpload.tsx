@@ -4,11 +4,8 @@ import { ImageUploadProps } from '../types';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 
 // Set worker source for pdfjs-dist. This needs to be accessible by the browser.
-// Using a stable CDN link corresponding to the imported pdfjs-dist version.
-// The error "API version "5.3.31" does not match the Worker version "4.4.168""
-// indicates the main library is 5.3.31, so the worker must also be 5.3.31.
 if (typeof pdfjsLib.GlobalWorkerOptions.workerSrc !== 'string' || !pdfjsLib.GlobalWorkerOptions.workerSrc.includes('pdf.worker.mjs')) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@5.3.31/build/pdf.worker.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onImageSelect, apiProcessing }) => {
