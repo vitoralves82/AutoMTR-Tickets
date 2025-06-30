@@ -28,7 +28,7 @@ export default defineConfig({
         'node:fs',
         'fs',
         'path'
-      ]]
+      ]
     }
   },
   optimizeDeps: {
