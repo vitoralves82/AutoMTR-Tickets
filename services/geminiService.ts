@@ -1,26 +1,6 @@
-// vite.config.ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { GoogleGenAI } from "@google/genai";
+import type { ProcessedImageData } from '../types';
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, '.'),
-    }
-  }
-});
-
-
-// services/geminiService.ts
-import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
-import type { ProcessedImageData } from '../types'; // ajuste o caminho se necessário
-
-/**
- * Chave API vinda do Vite. Lembre‑se: a variável TEM de chamar
- * VITE_GEMINI_API_KEY em Settings › Environment Variables.
- */
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 
 if (!API_KEY) {
@@ -30,34 +10,30 @@ if (!API_KEY) {
 
 let ai: GoogleGenAI | null = null;
 const getGenAIClient = (): GoogleGenAI => {
-  if (!ai) ai = new GoogleGenAI({ apiKey: API_KEY });
+  if (!ai) ai = new GoogleGenAI(API_KEY);
   return ai;
 };
 
-/**
- * Analisa imagens (ou só texto) usando o modelo Gemini‑pro.
- * Mantive a assinatura (images, prompt) para corresponder
- * ao import que existe no App.tsx.
- */
 export const analyzeImagesWithGemini = async (
   images: ProcessedImageData[] | undefined,
   prompt: string
-): Promise<GenerateContentResponse> => {
+): Promise<string> => {
   try {
     const client = getGenAIClient();
+    const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // Constrói partes: texto de prompt + array de imagens opcional
-    const parts: Part[] = [{ text: prompt }];
+    const parts: any[] = [{ text: prompt }];
     if (images && images.length) {
-      images.forEach(img => parts.push({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
+      images.forEach(img => parts.push({ 
+        inlineData: { 
+          data: img.base64, 
+          mimeType: img.mimeType 
+        } 
+      }));
     }
 
-    const response = await client.generateContent({
-      model: 'gemini-pro',
-      contents: [{ role: 'user', parts }]
-    });
-
-    return response;
+    const response = await model.generateContent(parts);
+    return response.response.text();
   } catch (error: any) {
     console.error('Erro na chamada Gemini API:', error);
     throw new Error(`Gemini API Error: ${error?.message || 'Unknown error.'}`);
