@@ -1,7 +1,8 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeImagesWithGemini } from './services/geminiService';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+
 import * as XLSX from 'xlsx';
 import type { ProcessedImageData, ExtractedField, ExtractedSection, GeminiJsonResponse } from './types';
 
