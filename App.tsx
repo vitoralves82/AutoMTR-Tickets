@@ -9,12 +9,27 @@ import DataTable from './components/DataTable';
 import Spinner from './components/Spinner';
 import Alert from './components/Alert';
 import AppHeader from './components/AppHeader';
+import { GEMINI_API_KEY } from './constants';
+
+async function chamaGemini(prompt: string) {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText?key=${GEMINI_API_KEY}`;
+
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+
+  return await r.json();
+}
 
 interface CurrentImageState {
   file: File; // Original uploaded file (for name, etc.)
   base64: string; // Base64 data (could be original image or converted PDF)
   mimeType: string; // MIME type of the base64 data to be sent to API
 }
+
 
 const LOCAL_STORAGE_KEY_MMR_COUNT = 'totalProcessedMmrsAutoMMR';
 
