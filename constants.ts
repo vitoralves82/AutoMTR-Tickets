@@ -1,6 +1,6 @@
 
 export const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
-
+export const GEMINI_API_KEY =  import.meta.env.VITE_GEMINI_API_KEY as string;
 export const GEMINI_API_PROMPT_HEADER = `
 Você é um assistente de extração de dados altamente preciso, especializado em formulários de Manifesto Marítimo de Resíduos (MMR) em português.
 Analise a imagem fornecida de um formulário MMR e extraia os seguintes campos do cabeçalho. Preste muita atenção aos rótulos exatos.
