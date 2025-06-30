@@ -12,8 +12,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "@google/genai": "^1.6.0",
-    "pdfjs-dist/build/pdf.mjs": "5.3.31",
-    "pdfjs-dist": "5.3.31",
+    "pdfjs-dist": "4.10.38",
     "xlsx": "0.18.5"
   },
   "devDependencies": {
