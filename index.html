@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoMTR & Tickets</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif; /* A nice default sans-serif font */
+      background-image: url('https://environpact.com/wp-content/uploads/2024/02/bg-slide-home.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    /* Custom scrollbar for better aesthetics */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #2d3748; /* Darker track for new background */
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    .file-input-button {
+      background-color: #F97316; /* Orange-500 equivalent */
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.375rem; /* Equivalent to Tailwind's rounded-md */
+      font-weight: 500; /* Medium font weight */
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+      text-align: center;
+    }
+    .file-input-button:hover {
+      background-color: #EA580C; /* Orange-600 equivalent */
+    }
+    .text-shadow {
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.7.0",
+    "xlsx": "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/xlsx.mjs",
+    "pdfjs-dist/": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/",
+    "@/App": "/App.tsx"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
