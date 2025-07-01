@@ -1,12 +1,8 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeImagesWithGemini } from './services/geminiService';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.min.mjs';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import * as XLSX from 'xlsx';
 import type { ProcessedImageData, ExtractedField, ExtractedSection, GeminiJsonResponse } from './types';
-
-// Configure pdf.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
 
 const App: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -89,6 +85,11 @@ Here is a complete example of the expected final JSON array structure:
   const [totalTimeSaved, setTotalTimeSaved] = useState<number>(0);
 
   useEffect(() => {
+    // Set the worker source for pdf.js. This is crucial for it to work.
+    // We point it to the same version as the main library via esm.sh,
+    // which is mapped in index.html. This ensures versions always match.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.10.38/build/pdf.worker.mjs`;
+
     try {
       const savedMinutes = localStorage.getItem('totalTimeSavedMinutes');
       if (savedMinutes) {
@@ -100,7 +101,7 @@ Here is a complete example of the expected final JSON array structure:
     } catch (error) {
         console.error("Failed to read time saved from localStorage", error);
     }
-  }, []);
+  }, []); // The empty dependency array ensures this effect runs only once.
 
   const resetAllState = () => {
     setErrorMessage(null);
