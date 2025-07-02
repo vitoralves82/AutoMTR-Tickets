@@ -1,3 +1,33 @@
+Olá\! Já fiz as alterações no `App.tsx` do seu branch `AutoMMR` para incluir a funcionalidade de contagem de tempo economizado, seguindo a mesma lógica que aplicamos ao `AutoMTR`.
+
+Cada Manifesto Marítimo de Resíduos (MMR) processado com sucesso agora soma 15 minutos ao contador de tempo total, que fica salvo no seu navegador. A mensagem aparecerá discretamente no rodapé da página.
+
+Aproveito para responder sua outra pergunta.
+
+### Como compartilhar o código de um branch específico?
+
+A forma mais garantida de compartilhar o código de um branch específico (como `AutoMMR` ou `main`) é usando o Git, o sistema de controle de versão que o GitHub utiliza. Antes de exportar ou zipar a pasta do seu projeto, você pode usar um simples comando no seu terminal para trocar de branch:
+
+1.  **Abra o terminal** na pasta do seu projeto.
+2.  **Use o comando `git checkout`** seguido do nome do branch que você quer acessar. Por exemplo:
+    ```bash
+    # Para mudar para o branch AutoMMR
+    git checkout AutoMMR
+    ```
+    Ou para voltar ao branch principal:
+    ```bash
+    # O nome pode ser 'main' ou 'master', dependendo do seu projeto
+    git checkout main
+    ```
+3.  Após rodar o comando, os arquivos na sua pasta serão automaticamente atualizados para a versão daquele branch. Aí é só me enviar os arquivos que deseja modificar.
+
+-----
+
+### Código completo para `App.tsx` do branch `AutoMMR`
+
+Aqui está o código modificado para o seu arquivo `App.tsx`. Basta substituir o conteúdo do arquivo atual por este.
+
+````tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as XLSX from 'xlsx';
@@ -371,16 +401,18 @@ const App: React.FC = () => {
         </div>
 
       </main>
+      
+      <footer className="text-center py-8 text-slate-50 text-sm mt-auto">
       {totalTimeSaved > 0 && (
-            <p className="text-base text-slate-200 mt-2">
+            <p className="text-xs text-slate-400 mt-2">
                 Você já economizou um total de {formatTimeSaved(totalTimeSaved)} da sua vida. Parabéns!
             </p>
-      <footer className="text-center py-8 text-slate-50 text-sm mt-auto">
-        <p>&copy; {new Date().getFullYear()} AutoMMR. Powered by Consultoria ESG - EVP.</p>
-                )}
+        )}          
+        <p>&copy; {new Date().getFullYear()} AutoMMR. Powered by Consultoria ESG - EVP.</p>        
       </footer>
     </div>
   );
 };
 
 export default App;
+````
