@@ -373,11 +373,11 @@ const App: React.FC = () => {
       </main>
       <footer className="text-center py-8 text-slate-50 text-sm mt-auto">  
       {totalTimeSaved > 0 && (
-          <p className="text-sm text-slate-300">
+          <p className="text-base text-slate-200">
               Você já economizou um total de {formatTimeSaved(totalTimeSaved)} da sua vida. Parabéns!
           </p>
           )}
-           <p className="text-xs text-slate-500 mt-2">
+           <p className="text-sm text-slate-400 mt-2">
             &copy; {new Date().getFullYear()} AutoMMR. Powered by Consultoria ESG - EVP.
           </p>
         </footer>
