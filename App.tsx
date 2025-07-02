@@ -371,13 +371,13 @@ const App: React.FC = () => {
         </div>
 
       </main>
-      <footer className="text-center py-8 text-slate-50 text-sm mt-auto">
-        <p>&copy; {new Date().getFullYear()} AutoMMR. Powered by Consultoria ESG - EVP.</p>
-        {totalTimeSaved > 0 && (
+      {totalTimeSaved > 0 && (
             <p className="text-base text-slate-200 mt-2">
                 Você já economizou um total de {formatTimeSaved(totalTimeSaved)} da sua vida. Parabéns!
             </p>
-        )}
+      <footer className="text-center py-8 text-slate-50 text-sm mt-auto">
+        <p>&copy; {new Date().getFullYear()} AutoMMR. Powered by Consultoria ESG - EVP.</p>
+                )}
       </footer>
     </div>
   );
