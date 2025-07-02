@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { ImageUploadProps } from '../types';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import * as pdfjsLib from 'pdfjs-lib';
 
 // Set worker source for pdfjs-dist to match the version from importmap.
 // This ensures the worker version always corresponds to the library version.

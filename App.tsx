@@ -143,8 +143,8 @@ const App: React.FC = () => {
       setError("Por favor, selecione um arquivo primeiro.");
       return;
     }
-    if (!process.env.API_KEY) {
-      setError("Chave de API não configurada. Verifique as variáveis de ambiente.");
+    if (!process.env.GEMINI_API_KEY) {
+      setError("A chave de API (GEMINI_API_KEY) não está configurada. Adicione-a às variáveis de ambiente do seu projeto Vercel.");
       return;
     }
 
@@ -153,7 +153,7 @@ const App: React.FC = () => {
     setExtractedData(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       let imageData = currentImage.base64;
       let imageMimeType = currentImage.mimeType;
