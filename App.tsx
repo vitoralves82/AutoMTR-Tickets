@@ -17,6 +17,7 @@ interface CurrentImageState {
 }
 
 const LOCAL_STORAGE_KEY_MMR_COUNT = 'totalProcessedMmrsAutoMMR';
+const LOCAL_STORAGE_KEY_TIME_SAVED = 'totalTimeSavedMinutesAutoMMR';
 
 const rotateImage = (base64Data: string, mimeType: string, degrees: number): Promise<{ rotatedBase64: string; newMimeType: string }> => {
     return new Promise((resolve, reject) => {
@@ -69,10 +70,20 @@ const App: React.FC = () => {
     const storedCount = localStorage.getItem(LOCAL_STORAGE_KEY_MMR_COUNT);
     return storedCount ? parseInt(storedCount, 10) : 0;
   });
+  
+  const [totalTimeSaved, setTotalTimeSaved] = useState<number>(0);
 
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY_MMR_COUNT, processedMmrCount.toString());
-  }, [processedMmrCount]);
+    // Carregar dados salvos do localStorage ao iniciar
+    const storedCount = localStorage.getItem(LOCAL_STORAGE_KEY_MMR_COUNT);
+    if (storedCount) {
+        setProcessedMmrCount(parseInt(storedCount, 10) || 0);
+    }
+    const savedMinutes = localStorage.getItem(LOCAL_STORAGE_KEY_TIME_SAVED);
+    if (savedMinutes) {
+        setTotalTimeSaved(parseInt(savedMinutes, 10) || 0);
+    }
+  }, []);
 
   const handleImageSelect = useCallback((originalFile: File, base64Data: string, mimeTypeForProcessing: string, dataUrl: string) => {
     setCurrentImage({ file: originalFile, base64: base64Data, mimeType: mimeTypeForProcessing });
@@ -159,7 +170,6 @@ const App: React.FC = () => {
       let imageData = currentImage.base64;
       let imageMimeType = currentImage.mimeType;
 
-      // Step 1: Check and correct image orientation
       setLoadingMessage('Verificando a orientação da imagem...');
       const orientationPrompt = `Analise a orientação do texto principal na imagem. Responda com uma única palavra: "upright" para texto normal, "upside_down" para de cabeça para baixo, "rotated_cw" para girado 90 graus no sentido horário, ou "rotated_ccw" para girado 90 graus no sentido anti-horário.`;
       
@@ -194,7 +204,6 @@ const App: React.FC = () => {
         },
       };
 
-      // Step 2: Extract Header
       setLoadingMessage('Extraindo dados do cabeçalho...');
       const headerResponse = await model.generateContent([
         imagePart,
@@ -209,7 +218,6 @@ const App: React.FC = () => {
         return;
       }
       
-      // Step 3: Extract Items
       setLoadingMessage('Extraindo itens da tabela...');
       const itemsResponse = await model.generateContent([
         imagePart,
@@ -226,7 +234,15 @@ const App: React.FC = () => {
       
       setLoadingMessage('Finalizando...');
       setExtractedData({ header: parsedHeader, items: parsedItems });
-      setProcessedMmrCount(prevCount => prevCount + 1); 
+      
+      const newMmrCount = processedMmrCount + 1;
+      setProcessedMmrCount(newMmrCount);
+      localStorage.setItem(LOCAL_STORAGE_KEY_MMR_COUNT, String(newMmrCount));
+      
+      const timeSavedThisSession = 15;
+      const newTotalTimeSaved = totalTimeSaved + timeSavedThisSession;
+      setTotalTimeSaved(newTotalTimeSaved);
+      localStorage.setItem(LOCAL_STORAGE_KEY_TIME_SAVED, String(newTotalTimeSaved));
 
     } catch (err) {
       console.error("Erro ao processar imagem com Gemini API:", err);
@@ -248,13 +264,13 @@ const App: React.FC = () => {
 
     const dataForExport = items.map(item => ({
       "Atividade": header.atividade ?? 'N/A',
-      "Bacia": "N/A", // Column "Bacia" is now "N/A"
-      "Projeto": header.bacia ?? 'N/A', // Column "Projeto" now gets data from header.bacia
+      "Bacia": "N/A",
+      "Projeto": header.bacia ?? 'N/A',
       "Poço": header.poco ?? 'N/A',
       "Gerador": header.gerador ?? 'N/A',
-      "Embarcação": header.transportador ?? 'N/A', // Mapping Transportador to Embarcação
+      "Embarcação": header.transportador ?? 'N/A',
       "Base de Apoio": header.baseDeApoio ?? 'N/A',
-      "MMR/MRB/FCDR": header.mmrNo ?? 'N/A', // Mapping MMR N°
+      "MMR/MRB/FCDR": header.mmrNo ?? 'N/A',
       "Data MMR": header.data ?? 'N/A',
       "Item": item.item ?? 'N/A',
       "Tipo de Resíduo": item.tipoDeResiduo ?? 'N/A',
@@ -266,10 +282,24 @@ const App: React.FC = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Dados MMR");
 
-    // Generate filename with timestamp
     const date = new Date();
     const timestamp = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}_${date.getHours().toString().padStart(2, '0')}${date.getMinutes().toString().padStart(2, '0')}${date.getSeconds().toString().padStart(2, '0')}`;
     XLSX.writeFile(workbook, `autommr_export_${timestamp}.xlsx`);
+  };
+
+  const formatTimeSaved = (totalMinutes: number): string => {
+    if (totalMinutes <= 0) return "";
+    if (totalMinutes < 60) return `${totalMinutes} minutos`;
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const hourText = hours > 1 ? 'horas' : 'hora';
+
+    if (minutes === 0) {
+        return `${hours} ${hourText}`;
+    }
+    
+    return `${hours} ${hourText} e ${minutes} minutos`;
   };
 
   return (
@@ -343,6 +373,11 @@ const App: React.FC = () => {
       </main>
       <footer className="text-center py-8 text-slate-50 text-sm mt-auto">
         <p>&copy; {new Date().getFullYear()} AutoMMR. Powered by Consultoria ESG - EVP.</p>
+        {totalTimeSaved > 0 && (
+            <p className="text-xs text-slate-400 mt-2">
+                Você já economizou um total de {formatTimeSaved(totalTimeSaved)} da sua vida. Parabéns!
+            </p>
+        )}
       </footer>
     </div>
   );
