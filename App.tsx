@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeImagesWithGemini } from './services/geminiService';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import * as XLSX from 'xlsx';
 import type { ProcessedImageData, ExtractedField, ExtractedSection, GeminiJsonResponse } from './types';
 
@@ -89,7 +88,10 @@ Here is a complete example of the expected final JSON array structure:
     // Set the worker source for pdf.js. This is crucial for it to work.
     // By importing the worker with `?url`, Vite will handle bundling it
     // and providing the correct path.
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.mjs',
+      import.meta.url
+    ).toString();
 
     try {
       const savedMinutes = localStorage.getItem('totalTimeSavedMinutes');
