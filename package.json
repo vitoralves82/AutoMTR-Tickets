@@ -14,7 +14,6 @@
     "@google/genai": "^1.7.0",
     "xlsx": "0.18.5",
     "pdfjs-dist": "4.10.38",
-    "@/App": "latest",
     "@vercel/node": "^5.3.0"
   },
   "devDependencies": {
