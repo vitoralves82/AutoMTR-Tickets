@@ -42,7 +42,7 @@ export default async function handler(
     };
 
     const allParts: Part[] = [...imageParts, textPart];
-    const model = "gemini-2.5-flash-preview-04-17";
+    const model = "models/gemini-2.5-flash";
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: model,
