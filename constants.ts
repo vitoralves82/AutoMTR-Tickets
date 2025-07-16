@@ -1,5 +1,5 @@
 
-export const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+export const GEMINI_MODEL_NAME = 'models/gemini-2.5-flash';
 
 export const GEMINI_API_PROMPT_HEADER = `
 Você é um assistente de extração de dados altamente preciso, especializado em formulários de Manifesto Marítimo de Resíduos (MMR) em português.
