@@ -20,7 +20,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Missing image data or prompt text' });
   }
 
-  const API_KEY = process.env.API_KEY;
+  const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
   if (!API_KEY) {
     console.error("API_KEY is not configured in Vercel Environment Variables.");
