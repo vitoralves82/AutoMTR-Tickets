@@ -1,63 +1,70 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, GenerateContentResponse, Part } from "@google/genai";
-import type { ProcessedImageData, AnalyzeApiRequest } from '../types';
+import { GoogleGenAI, GenerateContentResponse, Part } from '@google/genai';
+import { analyzeRequestSchema, MAX_PAYLOAD_BYTES, type ProcessedImageData } from '../types';
+import { EXTRACTION_PROMPT } from './prompt';
 
-// This is a Vercel Serverless Function
-// It runs on the server, not in the browser.
+// Função serverless da Vercel. Roda no servidor, nunca no navegador.
+// Tempo máximo de execução (chamadas multimodais podem ser longas).
+export const config = { maxDuration: 60 };
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-) {
+const MODEL = 'models/gemini-2.5-flash';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Método não permitido.' });
   }
 
-  const { imageDatas, promptText } = req.body as AnalyzeApiRequest;
-
-  if (!imageDatas || imageDatas.length === 0 || !promptText) {
-    return res.status(400).json({ error: 'Missing image data or prompt text' });
+  // Rejeita payloads grandes antes de qualquer processamento (limite prático da Vercel).
+  const payloadBytes = Buffer.byteLength(
+    typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? ''),
+    'utf8',
+  );
+  if (payloadBytes > MAX_PAYLOAD_BYTES) {
+    return res.status(413).json({
+      error:
+        'Os arquivos enviados são grandes demais. Envie menos arquivos ou arquivos menores e tente novamente.',
+    });
   }
+
+  const parsed = analyzeRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    return res.status(400).json({
+      error: firstIssue?.message || 'Requisição inválida.',
+    });
+  }
+
+  const { imageDatas } = parsed.data;
 
   const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
-
   if (!API_KEY) {
-    console.error("API_KEY is not configured in Vercel Environment Variables.");
-    return res.status(500).json({ error: "Server configuration error: API key is missing." });
+    console.error('GEMINI_API_KEY não está configurada nas variáveis de ambiente da Vercel.');
+    return res.status(500).json({ error: 'Erro de configuração do servidor: chave de API ausente.' });
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-    const imageParts: Part[] = imageDatas.map((imageData: ProcessedImageData) => ({
+    const fileParts: Part[] = imageDatas.map((file: ProcessedImageData) => ({
       inlineData: {
-        mimeType: imageData.mimeType,
-        data: imageData.base64,
+        mimeType: file.mimeType,
+        data: file.base64,
       },
     }));
 
-    const textPart: Part = {
-      text: promptText,
-    };
-
-    const allParts: Part[] = [...imageParts, textPart];
-    const model = "models/gemini-2.5-flash";
+    const allParts: Part[] = [...fileParts, { text: EXTRACTION_PROMPT }];
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: model,
+      model: MODEL,
       contents: { parts: allParts },
       config: {
-        responseMimeType: "application/json",
-      }
+        responseMimeType: 'application/json',
+      },
     });
 
-    const textOutput = response.text;
-
-    res.status(200).json({ text: textOutput });
-
+    return res.status(200).json({ text: response.text });
   } catch (error: any) {
-    console.error("Error calling Gemini API from serverless function:", error);
-    res.status(500).json({ error: `Gemini API Error: ${error.message}` });
+    console.error('Erro ao chamar a API do Gemini na função serverless:', error);
+    return res.status(500).json({ error: `Erro da API Gemini: ${error?.message || 'desconhecido'}` });
   }
 }
