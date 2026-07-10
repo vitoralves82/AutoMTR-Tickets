@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, GenerateContentResponse, Part } from '@google/genai';
+import { GoogleGenAI, GenerateContentResponse, Part, Type } from '@google/genai';
 import { analyzeRequestSchema, MAX_PAYLOAD_BYTES, type ProcessedImageData } from '../types';
 import { EXTRACTION_PROMPT } from './prompt';
 
@@ -7,7 +7,34 @@ import { EXTRACTION_PROMPT } from './prompt';
 // Tempo máximo de execução (chamadas multimodais podem ser longas).
 export const config = { maxDuration: 60 };
 
-const MODEL = 'models/gemini-2.5-flash';
+// Modelo flash estável mais recente. Configurável por variável de ambiente.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+
+// Structured output: garante que a IA responda no formato esperado, eliminando
+// o parsing defensivo que antes existia no cliente.
+const RESPONSE_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      sectionTitle: { type: Type.STRING },
+      fields: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            topic: { type: Type.STRING },
+            answer: { type: Type.STRING },
+          },
+          required: ['topic', 'answer'],
+          propertyOrdering: ['topic', 'answer'],
+        },
+      },
+    },
+    required: ['sectionTitle', 'fields'],
+    propertyOrdering: ['sectionTitle', 'fields'],
+  },
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -59,6 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contents: { parts: allParts },
       config: {
         responseMimeType: 'application/json',
+        responseSchema: RESPONSE_SCHEMA,
       },
     });
 

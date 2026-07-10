@@ -1,8 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeImagesWithGemini } from './services/geminiService';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import * as XLSX from 'xlsx';
-import type { ProcessedImageData, ExtractedField, ExtractedSection, GeminiJsonResponse } from './types';
+import {
+  ALLOWED_MIME_TYPES,
+  MAX_FILES,
+  MAX_PAYLOAD_BYTES,
+  geminiResponseSchema,
+  type ProcessedImageData,
+  type ExtractedField,
+  type ExtractedSection,
+  type GeminiJsonResponse,
+} from './types';
 
 const App: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -19,14 +27,6 @@ const App: React.FC = () => {
   const [totalTimeSaved, setTotalTimeSaved] = useState<number>(0);
 
   useEffect(() => {
-    // Set the worker source for pdf.js. This is crucial for it to work.
-    // By importing the worker with `?url`, Vite will handle bundling it
-    // and providing the correct path.
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.mjs',
-      import.meta.url
-    ).toString();
-
     try {
       const savedMinutes = localStorage.getItem('totalTimeSavedMinutes');
       if (savedMinutes) {
@@ -59,46 +59,19 @@ const App: React.FC = () => {
     });
   };
 
-  const processPdfDocument = async (file: File, onPageProcess: (msg: string) => void): Promise<ProcessedImageData[]> => {
-    const datas: ProcessedImageData[] = [];
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const numPagesToProcess = Math.min(pdf.numPages, 5);
-
-    for (let i = 1; i <= numPagesToProcess; i++) {
-        onPageProcess(`Processando PDF: ${file.name} (página ${i} de ${pdf.numPages})...`);
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const context = canvas.getContext('2d');
-
-        if (!context) {
-            throw new Error(`Failed to get canvas context for page ${i}.`);
-        }
-
-        await page.render({ canvasContext: context, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        
-        datas.push({
-            base64: dataUrl.split(',')[1],
-            mimeType: 'image/jpeg',
-            fileName: file.name,
-            pageNumber: i,
-        });
-    }
-    return datas;
-  };
-
-  const processDirectImage = async (file: File): Promise<ProcessedImageData> => {
+  // O Gemini processa PDFs nativamente: cada arquivo é lido para base64 e enviado
+  // como está (application/pdf ou imagem), sem rasterização no navegador.
+  const processFile = async (file: File): Promise<ProcessedImageData> => {
     const dataUrl = await fileToDataUrl(file);
     return {
-        base64: dataUrl.split(',')[1],
-        mimeType: file.type,
-        fileName: file.name
+      base64: dataUrl.split(',')[1],
+      mimeType: file.type as ProcessedImageData['mimeType'],
+      fileName: file.name,
     };
   };
+
+  const isAcceptedType = (type: string): boolean =>
+    (ALLOWED_MIME_TYPES as readonly string[]).includes(type);
 
   const handleFilesSelected = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) {
@@ -108,41 +81,43 @@ const App: React.FC = () => {
 
     resetAllState();
     const filesArray = Array.from(files);
+
+    if (filesArray.length > MAX_FILES) {
+      setErrorMessage(`Máximo de ${MAX_FILES} arquivos por análise. Selecione menos arquivos.`);
+      return;
+    }
+
     setSelectedFiles(filesArray);
     setIsProcessingFiles(true);
 
     const allProcessedData: ProcessedImageData[] = [];
 
     for (const file of filesArray) {
-      const acceptedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
-      const acceptedPdfType = 'application/pdf';
-
       try {
-        if (file.type === acceptedPdfType) {
-          setProcessingMessage(`Iniciando o processamento do PDF: ${file.name}...`);
-          const datas = await processPdfDocument(file, (msg) => setProcessingMessage(msg));
-          allProcessedData.push(...datas);
-        } else if (acceptedImageTypes.includes(file.type)) {
-          setProcessingMessage(`Processando imagem: ${file.name}...`);
-          const data = await processDirectImage(file);
+        if (isAcceptedType(file.type)) {
+          setProcessingMessage(`Processando: ${file.name}...`);
+          const data = await processFile(file);
           allProcessedData.push(data);
         } else {
-          console.warn(`Skipping invalid file type: ${file.name}`);
-          setErrorMessage(prev => {
-            const newError = `Arquivo não suportado ignorado: ${file.name}`;
+          setErrorMessage((prev) => {
+            const newError = `Arquivo não suportado ignorado: ${file.name} (aceitos: PDF, JPG, PNG, WEBP)`;
             return prev ? `${prev}\n${newError}` : newError;
           });
         }
       } catch (error: any) {
-        setErrorMessage(prev => {
-            const newError = `Falha ao processar ${file.name}: ${error?.message || 'Erro desconhecido'}`;
-            return prev ? `${prev}\n${newError}` : newError;
+        setErrorMessage((prev) => {
+          const newError = `Falha ao processar ${file.name}: ${error?.message || 'Erro desconhecido'}`;
+          return prev ? `${prev}\n${newError}` : newError;
         });
       }
     }
 
     setProcessedImageDatas(allProcessedData);
-    setProcessingMessage(`Processadas ${allProcessedData.length} página(s)/imagem(ns) de ${filesArray.length} arquivo(s). Pronto para análise.`);
+    if (allProcessedData.length > 0) {
+      setProcessingMessage(
+        `Processado(s) ${allProcessedData.length} de ${filesArray.length} arquivo(s). Pronto para análise.`,
+      );
+    }
     setIsProcessingFiles(false);
   }, []);
 
@@ -177,67 +152,26 @@ const App: React.FC = () => {
   }, [handleFilesSelected]);
 
 
+  // Com structured output (responseSchema) no servidor, a resposta já chega como
+  // JSON no formato esperado. Basta parsear e validar com o schema compartilhado.
   const parseGeminiResponse = (rawText: string | null): GeminiJsonResponse | null => {
     if (!rawText) return null;
 
-    let jsonStr = rawText.trim();
-    const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-    const match = jsonStr.match(fenceRegex);
-    if (match && match[2]) {
-      jsonStr = match[2].trim();
-    }
-
     try {
-      const parsedData: any = JSON.parse(jsonStr);
-      
-      if (!Array.isArray(parsedData)) {
-        console.error("Parsed data is not an array:", parsedData);
-        setErrorMessage("Erro: A resposta da API não foi o array de seções esperado. Exibindo dados brutos.");
+      const result = geminiResponseSchema.safeParse(JSON.parse(rawText));
+      if (!result.success) {
+        console.error('Resposta da IA não corresponde ao formato esperado:', result.error);
+        setErrorMessage(
+          'Erro: A resposta da IA não está no formato esperado. Exibindo dados brutos.',
+        );
         return null;
       }
-      
-      const normalizedData: ExtractedSection[] = [];
-
-      for (const section of parsedData) {
-        if (typeof section.sectionTitle !== 'string' || !Array.isArray(section.fields)) {
-          console.warn("Skipping invalid section structure:", section);
-          continue; // Skip this section and move to the next
-        }
-
-        const normalizedFields: ExtractedField[] = [];
-        for (const field of section.fields) {
-          if (field && typeof field.topic === 'string') {
-            const answer = String(field.answer ?? '');
-            normalizedFields.push({ topic: field.topic, answer: answer });
-          } else if (field && typeof field === 'object' && !Array.isArray(field) && field !== null) {
-            const keys = Object.keys(field);
-            if (keys.length > 0) {
-              const topic = keys[0];
-              const answer = String(field[topic] ?? '');
-              normalizedFields.push({ topic: topic, answer: answer });
-            } else {
-               console.warn("Skipping empty field object:", field);
-            }
-          } else {
-            console.warn("Skipping invalid field structure:", field);
-          }
-        }
-        
-        normalizedData.push({
-            sectionTitle: section.sectionTitle,
-            fields: normalizedFields
-        });
-      }
-
-      if (normalizedData.length === 0) {
-          setErrorMessage("Erro: A resposta da API não pôde ser analisada em nenhuma seção válida. Exibindo dados brutos.");
-          return null;
-      }
-
-      return normalizedData;
+      return result.data;
     } catch (e: any) {
-      console.error("Failed to parse JSON response:", e);
-      setErrorMessage(`Erro ao analisar os resultados: ${e?.message || 'Erro de análise desconhecido'}. Exibindo dados brutos.`);
+      console.error('Falha ao analisar a resposta JSON:', e);
+      setErrorMessage(
+        `Erro ao analisar os resultados: ${e?.message || 'erro desconhecido'}. Exibindo dados brutos.`,
+      );
       return null;
     }
   };
@@ -245,6 +179,19 @@ const App: React.FC = () => {
   const handleAnalyzeClick = async () => {
     if (processedImageDatas.length === 0) {
       setErrorMessage('Por favor, selecione e processe um arquivo primeiro.');
+      return;
+    }
+
+    // Verificação de tamanho antes de enviar (o servidor também rejeita, mas assim
+    // o usuário recebe um erro claro sem depender do round-trip).
+    const payloadBytes = processedImageDatas.reduce(
+      (sum, d) => sum + Math.floor((d.base64.length * 3) / 4),
+      0,
+    );
+    if (payloadBytes > MAX_PAYLOAD_BYTES) {
+      setErrorMessage(
+        'Os arquivos são grandes demais para envio. Tente enviar menos arquivos ou arquivos menores.',
+      );
       return;
     }
 
@@ -480,7 +427,7 @@ const App: React.FC = () => {
     </div>
   );
   
-  const supportedFormatsText = "(JPG, PNG, PDF, WEBP, GIF, BMP)";
+  const supportedFormatsText = "(PDF, JPG, PNG, WEBP)";
   
   const escapeHtml = (unsafe: string): string =>
     unsafe
@@ -592,6 +539,13 @@ const App: React.FC = () => {
     );
   };
   
+  const formatFileSize = (base64: string): string => {
+    const bytes = Math.floor((base64.length * 3) / 4);
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const previewsByFile = processedImageDatas.reduce((acc, data) => {
       if (!acc[data.fileName]) {
           acc[data.fileName] = [];
@@ -635,7 +589,7 @@ const App: React.FC = () => {
                     <input
                         id="fileUpload"
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,application/pdf"
+                        accept="application/pdf,image/jpeg,image/png,image/webp"
                         onChange={handleFileChange}
                         className="hidden"
                         multiple
@@ -680,17 +634,27 @@ const App: React.FC = () => {
                 <div key={fileName} className="p-3 bg-slate-700/80 rounded-lg">
                   <h3 className="text-lg font-medium text-white border-b border-slate-600 pb-2 mb-3">
                     {escapeHtml(fileName)}
-                    {fileData.length > 1 && ` (${fileData.length} páginas)`}
                   </h3>
                   <div className="space-y-4">
                     {fileData.map((data, index) => (
-                      <div key={`${data.fileName}-${data.pageNumber || index}`} className="flex flex-col items-center">
-                        {data.pageNumber && <p className="text-sm text-white mb-1">Página {data.pageNumber}</p>} 
-                        <img 
-                          src={`data:${data.mimeType};base64,${data.base64}`}
-                          alt={`Pré-visualização de ${escapeHtml(fileName)} ${data.pageNumber ? `página ${data.pageNumber}` : `imagem ${index + 1}`}`}
-                          className="max-w-full max-h-96 rounded-md object-contain shadow-lg"
-                        />
+                      <div key={`${data.fileName}-${index}`} className="flex flex-col items-center">
+                        {data.mimeType === 'application/pdf' ? (
+                          <div className="flex items-center gap-3 w-full p-3 bg-slate-600/60 rounded-md">
+                            <svg className="h-10 w-10 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div className="text-sm text-white">
+                              <p className="font-medium">Documento PDF</p>
+                              <p className="text-slate-300">{formatFileSize(data.base64)}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={`data:${data.mimeType};base64,${data.base64}`}
+                            alt={`Pré-visualização de ${fileName}`}
+                            className="max-w-full max-h-96 rounded-md object-contain shadow-lg"
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
