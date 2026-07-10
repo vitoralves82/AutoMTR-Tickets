@@ -33,6 +33,6 @@ export const analyzeImagesWithGemini = async (
       error && typeof error.message === 'string'
         ? error.message
         : 'Ocorreu um erro desconhecido na comunicação com o backend.';
-    throw new Error(detailedMessage);
+    throw new Error(detailedMessage, { cause: error });
   }
 };

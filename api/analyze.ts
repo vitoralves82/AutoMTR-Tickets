@@ -66,7 +66,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
   if (!API_KEY) {
     console.error('GEMINI_API_KEY não está configurada nas variáveis de ambiente da Vercel.');
-    return res.status(500).json({ error: 'Erro de configuração do servidor: chave de API ausente.' });
+    return res
+      .status(500)
+      .json({ error: 'Erro de configuração do servidor: chave de API ausente.' });
   }
 
   try {
@@ -93,6 +95,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ text: response.text });
   } catch (error: any) {
     console.error('Erro ao chamar a API do Gemini na função serverless:', error);
-    return res.status(500).json({ error: `Erro da API Gemini: ${error?.message || 'desconhecido'}` });
+    return res
+      .status(500)
+      .json({ error: `Erro da API Gemini: ${error?.message || 'desconhecido'}` });
   }
 }

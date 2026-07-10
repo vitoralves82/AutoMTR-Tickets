@@ -63,7 +63,12 @@ const newWasteItem = (): WasteItem => ({
 });
 
 const cleanRazaoSocial = (text: string): string =>
-  text ? text.replace(/[^a-zA-Z\sÀ-ú]/g, '').replace(/\s+/g, ' ').trim() : '';
+  text
+    ? text
+        .replace(/[^a-zA-Z\sÀ-ú]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    : '';
 
 const join = (values: string[]): string => values.filter(Boolean).join(' / ');
 
