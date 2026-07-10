@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { analyzeImagesWithGemini } from './services/geminiService';
-import * as XLSX from 'xlsx';
+import { buildWorkbook } from './services/excelExport';
 import {
   ALLOWED_MIME_TYPES,
   MAX_FILES,
@@ -253,168 +253,24 @@ const App: React.FC = () => {
     }
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (!parsedApiResponse) return;
 
-    const headers = [
-      'Atividade', 'Bacia', 'Projeto', 'Gerador', 'Embarcação de Transporte', 'Base de Apoio',
-      'MMR', 'Data MMR', 'Item', 'Tipo de Resíduo', 'Peso (Kg)', 'Acondicionamento',
-      'Classe NBR 10.004', 'Código', 'Código do Resíduo', 'RNC', 'Observações Internas',
-      'MTR-Transp', 'Data MTR-Transp', 'Peso MTR-Transp (T)', 'Empresa Transportadora (MTR-Transp)',
-      'Empresa Receptora (MTR-Transp)', 'MTR-Dest', 'Data MTR-Dest', 'Peso MTR-Dest (T)',
-      'Empresa Transportadora (MTR-Dest)', 'Empresa Receptora (MTR-Dest)', 'Ticket de pesagem',
-      'Rel. Recebimento - Transp', 'Rel. Recebimento - Dest', 'CDF', 'Forma de Tratamento / Destinação final'
-    ];
-
-    let mtrNumber = '', gerador = '', transportador = '', destinador = '', dataTransporte = '';
-    const cleanRazaoSocial = (text: string) => text ? text.replace(/[^a-zA-Z\sÀ-ú]/g, '').replace(/\s+/g, ' ').trim() : '';
-    
-    parsedApiResponse.forEach(section => {
-        const titleLower = section.sectionTitle.toLowerCase();
-        if (titleLower.includes('cabeçalho')) {
-            mtrNumber = section.fields.find(f => f.topic.toLowerCase().includes('mtr n°'))?.answer.replace(/\D/g, '') || '';
-        } else if (titleLower.includes('gerador')) {
-            gerador = cleanRazaoSocial(section.fields.find(f => f.topic.toLowerCase().includes('razão social'))?.answer || '');
-        } else if (titleLower.includes('transportador')) {
-            transportador = cleanRazaoSocial(section.fields.find(f => f.topic.toLowerCase().includes('razão social'))?.answer || '');
-        } else if (titleLower.includes('destinador')) {
-            destinador = cleanRazaoSocial(section.fields.find(f => f.topic.toLowerCase().includes('razão social'))?.answer || '');
-        }
-        
-        if (!dataTransporte) {
-            const dateField = section.fields.find(f => 
-                f.topic.toLowerCase().includes('data do transporte') ||
-                f.topic.toLowerCase().includes('data de emissão')
-            );
-            if (dateField && dateField.answer) {
-              dataTransporte = dateField.answer;
-            }
-        }
+    const workbook = buildWorkbook(parsedApiResponse);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-
-    const wasteItems: any[] = [];
-    const residuosSection = parsedApiResponse.find(s => s.sectionTitle.toLowerCase().includes('resíduos'));
-    if (residuosSection) {
-      let currentItem: any = null;
-      residuosSection.fields.forEach(field => {
-          if (field.topic.toLowerCase().includes('item nº')) {
-              if (currentItem) wasteItems.push(currentItem);
-              currentItem = { 'Item': '' };
-          }
-          if (currentItem) {
-              const topic = field.topic.toLowerCase();
-              if (topic === 'código ibama') {
-                  const codeMatch = field.answer.match(/\d{6}/);
-                  if (codeMatch) {
-                      const formattedCode = codeMatch[0].replace(/(\d{2})(\d{2})(\d{2})/, '$1 $2 $3');
-                      currentItem['Código do Resíduo'] = `${formattedCode} (*)`;
-                  } else {
-                      currentItem['Código do Resíduo'] = field.answer;
-                  }
-              } else if (topic === 'qtde') {
-                  currentItem.qtde = field.answer;
-              } else if (topic === 'unidade') {
-                  currentItem.unidade = field.answer;
-              }
-          }
-      });
-      if (currentItem) wasteItems.push(currentItem);
-    }
-    
-    let totalQtdeKg = 0;
-    wasteItems.forEach(item => {
-        if (item.qtde) {
-            const value = parseFloat(item.qtde.replace(',', '.'));
-            if (!isNaN(value)) {
-                const unit = item.unidade ? item.unidade.toLowerCase() : 'kg';
-                if (unit === 't' || unit === 'ton' || unit === 'tonelada' || unit === 'toneladas') {
-                    totalQtdeKg += value * 1000;
-                } else {
-                    totalQtdeKg += value;
-                }
-            }
-        }
-    });
-    const pesoMtrTranspT = totalQtdeKg > 0 ? (totalQtdeKg / 1000).toFixed(5) : '';
-    
-    const ticketsSection = parsedApiResponse.find(section => section.sectionTitle.toLowerCase().includes('tickets'));
-    const ticketFields = ticketsSection 
-        ? ticketsSection.fields.filter(f => f.topic.toLowerCase().includes('peso líquido')) 
-        : [];
-
-    const exportData: any[] = [];
-    const baseData = {
-        'Gerador': gerador,
-        'MTR-Transp': mtrNumber,
-        'Data MTR-Transp': dataTransporte,
-        'Peso MTR-Transp (T)': pesoMtrTranspT,
-        'Empresa Transportadora (MTR-Transp)': transportador,
-        'Empresa Receptora (MTR-Transp)': destinador,
-        'Empresa Receptora (MTR-Dest)': destinador,
-    };
-
-    if (ticketFields.length > 0) {
-        const consolidatedWasteInfo = {
-            'Tipo de Resíduo': '',
-            'Acondicionamento': '',
-            'Classe NBR 10.004': '',
-            'Código do Resíduo': wasteItems.map(i => i['Código do Resíduo']).filter(Boolean).join(' / '),
-            'Forma de Tratamento / Destinação final': '',
-            'Item': '',
-        };
-
-        ticketFields.forEach(ticketField => {
-            const cleanNumberStr = ticketField.answer.replace(/\./g, '').replace(',', '.');
-            const numericMatch = cleanNumberStr.match(/(\d+(\.\d+)?)/);
-            let ticketWeightKg = '';
-            if (numericMatch) {
-                const value = parseFloat(numericMatch[0]);
-                if (!isNaN(value)) {
-                    ticketWeightKg = value.toFixed(2);
-                }
-            }
-            
-            const row = { 
-                ...baseData,
-                ...consolidatedWasteInfo,
-                'Ticket de pesagem': ticketWeightKg ? 'ok' : '',
-                'Peso (Kg)': ticketWeightKg,
-            };
-            exportData.push(row);
-        });
-
-    } else if (wasteItems.length > 0) {
-        wasteItems.forEach((item) => {
-            const { qtde, unidade, ...itemForExport } = item;
-            const row = { 
-                ...baseData, 
-                ...itemForExport,
-                'Ticket de pesagem': '',
-                'Peso (Kg)': '',
-            };
-            exportData.push(row);
-        });
-    } else {
-        const row = { 
-          ...baseData,
-          'Ticket de pesagem': '',
-          'Peso (Kg)': '',
-        };
-        exportData.push(row);
-    }
-    
-    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
-    XLSX.utils.sheet_add_json(worksheet, exportData, { 
-      origin: 'A2', 
-      skipHeader: true, 
-      header: headers 
-    });
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Controle de MTRs');
 
     const fileName = `MTR_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const LoadingSpinner: React.FC<{text?: string}> = ({ text = "Analisando..."}) => (
