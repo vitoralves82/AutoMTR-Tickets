@@ -39,9 +39,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
   return (
     <section>
-      <h2 className="text-2xl font-semibold mb-3 text-white text-center">
-        1. Envie os Documentos MTR
-      </h2>
+      <h2 className="text-2xl font-semibold mb-3 text-white text-center">2. Envie os Documentos</h2>
       <div
         onDragEnter={(e) => {
           e.preventDefault();
