@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, GenerateContentResponse, Part, Type } from '@google/genai';
 import { analyzeRequestSchema, MAX_PAYLOAD_BYTES, type ProcessedImageData } from '../types';
-import { EXTRACTION_PROMPT } from './prompt';
+import { getExtractionPrompt } from './prompt';
 
 // Função serverless da Vercel. Roda no servidor, nunca no navegador.
 // Tempo máximo de execução (chamadas multimodais podem ser longas).
@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const { imageDatas } = parsed.data;
+  const { documentType, imageDatas } = parsed.data;
 
   const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
   if (!API_KEY) {
@@ -81,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     }));
 
-    const allParts: Part[] = [...fileParts, { text: EXTRACTION_PROMPT }];
+    const allParts: Part[] = [...fileParts, { text: getExtractionPrompt(documentType) }];
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: MODEL,

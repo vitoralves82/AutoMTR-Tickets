@@ -1,16 +1,17 @@
-import type { ProcessedImageData, AnalyzeApiRequest } from '../types';
+import type { ProcessedImageData, AnalyzeApiRequest, DocumentType } from '../types';
 
 // Envia os arquivos processados para a função serverless, que detém o prompt de
 // extração e a chave de API. O cliente não envia mais o prompt.
 export const analyzeImagesWithGemini = async (
   imageDatas: ProcessedImageData[],
+  documentType: DocumentType,
 ): Promise<string> => {
   if (!imageDatas || imageDatas.length === 0) {
     throw new Error('Nenhum arquivo fornecido para análise.');
   }
 
   try {
-    const body: AnalyzeApiRequest = { imageDatas };
+    const body: AnalyzeApiRequest = { documentType, imageDatas };
 
     const response = await fetch('/api/analyze', {
       method: 'POST',
