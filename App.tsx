@@ -1,4 +1,6 @@
 import React from 'react';
+import type ExcelJS from 'exceljs';
+import { DocumentTypeSelector } from './components/DocumentTypeSelector';
 import { FileUpload } from './components/FileUpload';
 import { DocumentPreview } from './components/DocumentPreview';
 import { ResultsTable } from './components/ResultsTable';
@@ -9,6 +11,7 @@ import { useDocumentAnalysis } from './hooks/useDocumentAnalysis';
 
 const App: React.FC = () => {
   const {
+    documentType,
     selectedFiles,
     processedFiles,
     rawApiResponse,
@@ -18,6 +21,7 @@ const App: React.FC = () => {
     isLoadingApi,
     errorMessage,
     totalTimeSaved,
+    setDocumentType,
     handleFilesSelected,
     analyze,
   } = useDocumentAnalysis();
@@ -25,15 +29,23 @@ const App: React.FC = () => {
   const handleExportToExcel = async () => {
     if (!parsedApiResponse) return;
 
-    // exceljs é grande; carregado sob demanda para não pesar o bundle inicial.
-    const { buildWorkbook } = await import('./services/excelExport');
-    const workbook = buildWorkbook(parsedApiResponse);
-    const buffer = await workbook.xlsx.writeBuffer();
+    // Os módulos de exportação são grandes (exceljs); carregados sob demanda
+    // para não pesar o bundle inicial.
+    let buffer: ExcelJS.Buffer;
+    if (documentType === 'mmr') {
+      const { buildMmrWorkbook } = await import('./services/mmrExcelExport');
+      buffer = await buildMmrWorkbook(parsedApiResponse).xlsx.writeBuffer();
+    } else {
+      const { buildWorkbook } = await import('./services/excelExport');
+      buffer = await buildWorkbook(parsedApiResponse).xlsx.writeBuffer();
+    }
+
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
 
-    const fileName = `MTR_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filePrefix = documentType === 'mmr' ? 'MMR_Export' : 'MTR_Export';
+    const fileName = `${filePrefix}_${new Date().toISOString().split('T')[0]}.xlsx`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -51,11 +63,17 @@ const App: React.FC = () => {
           AutoMTR &amp; Tickets
         </h1>
         <p className="mt-2 text-lg text-white text-shadow">
-          Extraia informações de formulários MTR e Tickets de pesagem com facilidade usando IA.
+          Extraia informações de formulários MTR, MMR e Tickets de pesagem com facilidade usando IA.
         </p>
       </header>
 
       <main className="w-full max-w-2xl bg-slate-900/70 backdrop-blur-md shadow-2xl rounded-lg p-6 sm:p-8 space-y-6">
+        <DocumentTypeSelector
+          value={documentType}
+          onChange={setDocumentType}
+          disabled={isProcessingFiles || isLoadingApi}
+        />
+
         <FileUpload
           onFilesSelected={handleFilesSelected}
           selectedCount={selectedFiles.length}

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// Tipos de documento suportados pelo fluxo de extração.
+export const DOCUMENT_TYPES = ['mtr', 'mmr'] as const;
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];
+
 // Formatos aceitos pelo Gemini para entrada multimodal (PDF nativo + imagens).
 export const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -21,6 +25,8 @@ export const processedFileSchema = z.object({
 });
 
 export const analyzeRequestSchema = z.object({
+  // 'mtr' como padrão preserva chamadas de clientes que ainda não enviam o campo.
+  documentType: z.enum(DOCUMENT_TYPES).default('mtr'),
   imageDatas: z
     .array(processedFileSchema)
     .min(1, 'Nenhum arquivo enviado para análise.')

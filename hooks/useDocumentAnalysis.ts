@@ -5,6 +5,7 @@ import { base64ToBytes, isAcceptedType, processFile } from '../utils/files';
 import {
   MAX_FILES,
   MAX_PAYLOAD_BYTES,
+  type DocumentType,
   type GeminiJsonResponse,
   type ProcessedImageData,
 } from '../types';
@@ -13,6 +14,7 @@ const TIME_SAVED_KEY = 'totalTimeSavedMinutes';
 const MINUTES_SAVED_PER_PDF = 20;
 
 export interface DocumentAnalysis {
+  documentType: DocumentType;
   selectedFiles: File[];
   processedFiles: ProcessedImageData[];
   rawApiResponse: string | null;
@@ -22,11 +24,13 @@ export interface DocumentAnalysis {
   isLoadingApi: boolean;
   errorMessage: string | null;
   totalTimeSaved: number;
+  setDocumentType: (type: DocumentType) => void;
   handleFilesSelected: (files: FileList | null) => Promise<void>;
   analyze: () => Promise<void>;
 }
 
 export const useDocumentAnalysis = (): DocumentAnalysis => {
+  const [documentType, setDocumentTypeState] = useState<DocumentType>('mtr');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [processedFiles, setProcessedFiles] = useState<ProcessedImageData[]>([]);
   const [rawApiResponse, setRawApiResponse] = useState<string | null>(null);
@@ -56,6 +60,11 @@ export const useDocumentAnalysis = (): DocumentAnalysis => {
     setProcessingMessage(null);
     setSelectedFiles([]);
   };
+
+  const setDocumentType = useCallback((type: DocumentType) => {
+    setDocumentTypeState(type);
+    resetResults();
+  }, []);
 
   const handleFilesSelected = useCallback(async (files: FileList | null) => {
     resetResults();
@@ -134,7 +143,7 @@ export const useDocumentAnalysis = (): DocumentAnalysis => {
     setParsedApiResponse(null);
 
     try {
-      const result = await analyzeImagesWithGemini(processedFiles);
+      const result = await analyzeImagesWithGemini(processedFiles, documentType);
       setRawApiResponse(result);
 
       const parsed = parseGeminiResponse(result);
@@ -159,9 +168,10 @@ export const useDocumentAnalysis = (): DocumentAnalysis => {
     } finally {
       setIsLoadingApi(false);
     }
-  }, [processedFiles, registerTimeSaved]);
+  }, [processedFiles, documentType, registerTimeSaved]);
 
   return {
+    documentType,
     selectedFiles,
     processedFiles,
     rawApiResponse,
@@ -171,6 +181,7 @@ export const useDocumentAnalysis = (): DocumentAnalysis => {
     isLoadingApi,
     errorMessage,
     totalTimeSaved,
+    setDocumentType,
     handleFilesSelected,
     analyze,
   };
