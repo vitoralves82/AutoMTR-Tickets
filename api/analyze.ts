@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, GenerateContentResponse, Part, Type } from '@google/genai';
-import { analyzeRequestSchema, MAX_PAYLOAD_BYTES, type ProcessedImageData } from '../types';
-import { getExtractionPrompt } from './prompt';
+import { analyzeRequestSchema, MAX_PAYLOAD_BYTES, type ProcessedImageData } from '../types.js';
+import { getExtractionPrompt } from './prompt.js';
 
 // Função serverless da Vercel. Roda no servidor, nunca no navegador.
 // Tempo máximo de execução (chamadas multimodais podem ser longas).

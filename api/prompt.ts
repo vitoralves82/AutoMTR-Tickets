@@ -1,4 +1,4 @@
-import type { DocumentType } from '../types';
+import type { DocumentType } from '../types.js';
 
 // Prompts de extração. Mantidos no servidor para que o cliente não possa
 // substituí-los (o endpoint não aceita prompt arbitrário).
