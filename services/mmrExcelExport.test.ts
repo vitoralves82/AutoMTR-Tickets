@@ -53,33 +53,33 @@ describe('buildMmrExportRows — vários itens de resíduo', () => {
     expect(rows).toHaveLength(2);
   });
 
-  it('mapeia corretamente os campos de cada item', () => {
+  it('mapeia corretamente os campos de cada item, sem Peso (Kg)/Quantidade/Unidade/MTR', () => {
     expect(rows[0]['Item']).toBe('1');
-    expect(rows[0]['Código do Resíduo']).toBe('A009');
+    expect(rows[0]['Código do resíduo']).toBe('A009');
     expect(rows[0]['Tipo de Resíduo']).toBe('Madeira não contaminada');
     expect(rows[0]['Descrição do MMR']).toBe('Non contaminated wood');
     expect(rows[0]['Acondicionamento']).toBe('Lote');
-    expect(rows[0]['Quantidade']).toBe('1');
-    expect(rows[0]['Unidade']).toBe('UN');
-    expect(rows[0]['Peso (Kg)']).toBe('715');
     expect(rows[0]['Classe NBR 10.004']).toBe('IIA');
-    expect(rows[0]['MTR']).toBe('2113232195');
+    expect(rows[0]['Peso (Kg)']).toBeUndefined();
+    expect(rows[0]['Quantidade']).toBeUndefined();
+    expect(rows[0]['Unidade']).toBeUndefined();
+    expect(rows[0]['MTR']).toBeUndefined();
 
     expect(rows[1]['Item']).toBe('2');
-    expect(rows[1]['Código do Resíduo']).toBe('B001');
-    expect(rows[1]['Peso (Kg)']).toBe('340');
+    expect(rows[1]['Código do resíduo']).toBe('B001');
+    expect(rows[1]['Peso (Kg)']).toBeUndefined();
   });
 
   it('repete os dados de cabeçalho em todas as linhas', () => {
     for (const row of rows) {
-      expect(row['MMR']).toBe('026/2025');
+      expect(row['MMR/MRB/FCDR']).toBe('026/2025');
       expect(row['Data MMR']).toBe('27-fev-25');
       expect(row['Gerador']).toBe('VALARIS DS-17');
       expect(row['Embarcação de Transporte']).toBe('DELTA COMMANDER');
       expect(row['Base de Apoio']).toBe('TRIUNFO LOGÍSTICA');
       expect(row['Atividade']).toBe('Perfuração');
       expect(row['Bacia']).toBe('Bacalhau');
-      expect(row['Poço']).toBe('WI-5');
+      expect(row['POÇO']).toBe('WI-5');
     }
   });
 
@@ -94,7 +94,7 @@ describe('buildMmrExportRows — sem itens de resíduo', () => {
   it('gera uma única linha só com o cabeçalho preenchido', () => {
     const rows = buildMmrExportRows([cabecalho]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]['MMR']).toBe('026/2025');
+    expect(rows[0]['MMR/MRB/FCDR']).toBe('026/2025');
     expect(rows[0]['Gerador']).toBe('VALARIS DS-17');
     expect(rows[0]['RNC']).toBe('');
     expect(rows[0]['Item']).toBeUndefined();
@@ -103,7 +103,7 @@ describe('buildMmrExportRows — sem itens de resíduo', () => {
   it('gera uma linha vazia quando não há nenhuma seção', () => {
     const rows = buildMmrExportRows([]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]['MMR']).toBe('');
+    expect(rows[0]['MMR/MRB/FCDR']).toBe('');
     expect(rows[0]['RNC']).toBe('');
   });
 });

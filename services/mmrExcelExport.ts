@@ -1,28 +1,26 @@
 import ExcelJS from 'exceljs';
 import type { GeminiJsonResponse } from '../types';
 
-// Layout da planilha de rastreabilidade do MMR. A ordem exata ainda será
-// validada contra a planilha real do cliente.
+// Layout da planilha de rastreabilidade do MMR, validado contra a planilha
+// real usada pelo cliente (aba "Rastreabilidade"). 16 colunas, nesta ordem
+// exata. Peso (Kg), Quantidade, Unidade e MTR não pertencem a este layout —
+// vêm de outros documentos (Ticket de pesagem e MTR), não do MMR.
 export const HEADERS = [
   'Atividade',
   'Bacia',
   'Projeto',
-  'Poço',
+  'POÇO',
   'Gerador',
   'Embarcação de Transporte',
   'Base de Apoio',
-  'MMR',
+  'MMR/MRB/FCDR',
   'Data MMR',
   'Item',
   'Tipo de Resíduo',
   'Descrição do MMR',
   'Acondicionamento',
   'Classe NBR 10.004',
-  'Código do Resíduo',
-  'Peso (Kg)',
-  'Quantidade',
-  'Unidade',
-  'MTR',
+  'Código do resíduo',
   'RNC',
 ] as const;
 
@@ -34,11 +32,7 @@ interface MmrWasteItem {
   tipoResiduo: string;
   descricao: string;
   acondicionamento: string;
-  quantidade: string;
-  unidade: string;
-  pesoKg: string;
   classeNbr: string;
-  mtr: string;
 }
 
 const newWasteItem = (): MmrWasteItem => ({
@@ -47,11 +41,7 @@ const newWasteItem = (): MmrWasteItem => ({
   tipoResiduo: '',
   descricao: '',
   acondicionamento: '',
-  quantidade: '',
-  unidade: '',
-  pesoKg: '',
   classeNbr: '',
-  mtr: '',
 });
 
 const parseWasteItems = (itensFields: { topic: string; answer: string }[]): MmrWasteItem[] => {
@@ -78,16 +68,8 @@ const parseWasteItems = (itensFields: { topic: string; answer: string }[]): MmrW
       current.descricao = field.answer;
     } else if (topic === 'acondicionamento') {
       current.acondicionamento = field.answer;
-    } else if (topic === 'quantidade') {
-      current.quantidade = field.answer;
-    } else if (topic === 'unidade') {
-      current.unidade = field.answer;
-    } else if (topic === 'peso (kg)') {
-      current.pesoKg = field.answer;
     } else if (topic === 'classe nbr') {
       current.classeNbr = field.answer;
-    } else if (topic === 'mtr') {
-      current.mtr = field.answer;
     } else {
       continue;
     }
@@ -111,11 +93,11 @@ export const buildMmrExportRows = (data: GeminiJsonResponse): MmrExportRow[] => 
     Atividade: headerField('Atividade'),
     Bacia: headerField('Bacia'),
     Projeto: headerField('Projeto'),
-    Poço: headerField('Poço'),
+    'POÇO': headerField('Poço'),
     Gerador: headerField('Gerador'),
     'Embarcação de Transporte': headerField('Transportador'),
     'Base de Apoio': headerField('Base de Apoio'),
-    MMR: headerField('MMR N°'),
+    'MMR/MRB/FCDR': headerField('MMR N°'),
     'Data MMR': headerField('Data'),
     RNC: '',
   };
@@ -135,11 +117,7 @@ export const buildMmrExportRows = (data: GeminiJsonResponse): MmrExportRow[] => 
     'Descrição do MMR': item.descricao,
     Acondicionamento: item.acondicionamento,
     'Classe NBR 10.004': item.classeNbr,
-    'Código do Resíduo': item.codigo,
-    'Peso (Kg)': item.pesoKg,
-    Quantidade: item.quantidade,
-    Unidade: item.unidade,
-    MTR: item.mtr,
+    'Código do resíduo': item.codigo,
   }));
 };
 
